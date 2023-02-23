@@ -95,9 +95,5 @@ pub mod config {
         };
     }
 
-    // pub fn check() {}
-
-    // pub fn parse() {}
-
     // pub fn write() {}
 }
