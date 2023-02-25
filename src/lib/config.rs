@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod config {
     use std::env;
     use std::fs::File;
@@ -27,22 +29,30 @@ pub mod config {
         pub expiry: String,
     }
 
-    pub fn read_config() -> ConfigStruct {
-        let rclone_path;
-        match env::consts::OS {
-            "windows" => {
-                let mut path = std::env::var("APPDATA").expect("Can not get AppData folder");
-                path.push_str("/rclone/rclone.conf");
-                rclone_path = path;
-            }
-            _ => {
-                let mut path = std::env::var("HOME").expect("Can not get HOME directory");
-                path.push_str("/rclone/rclone.conf");
-                rclone_path = path;
-            }
-        }
+    enum ConfigType {
+        RRclone,
+        Rclone,
+    }
 
-        let file = File::open(&rclone_path).unwrap();
+    fn get_config_path(conf_type: ConfigType) -> String {
+        let mut config_path;
+        config_path = match env::consts::OS {
+            "windows" => std::env::var("APPDATA").expect("Can not get AppData folder"),
+
+            _ => std::env::var("HOME").expect("Can not get HOME directory"),
+        };
+        match conf_type {
+            ConfigType::RRclone => config_path.push_str("/rrclone/config.conf"),
+            ConfigType::Rclone => config_path.push_str("/rclone/rclone.conf"),
+        }
+        config_path
+    }
+
+    pub fn read_rclone_config() -> ConfigStruct {
+        // let path = get_config_path(ConfigType::Rclone);
+        let path = r"C:\Users\evilDAVE\dev\rrclone\config.conf";
+
+        let file = File::open(&path).unwrap();
         let buffered = BufReader::new(file);
 
         let mut drive_name = String::new();
@@ -89,10 +99,7 @@ pub mod config {
                 }
             }
         }
-        return ConfigStruct {
-            path: rclone_path,
-            drives,
-        };
+        ConfigStruct { path: path.to_owned(), drives }
     }
 
     // pub fn write() {}

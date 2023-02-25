@@ -7,5 +7,8 @@ edition = "2021"
 
 [dependencies]
 crossterm = "0.26.0"
+log = "0.4.17"
 serde_json = "1.0.93"
+# tokio = { version = "1.25.0", features = ["full"] }
 tui = "0.19.0"
+tui-logger = "0.8.1"

@@ -1,16 +1,31 @@
 mod lib {
-    pub(crate) mod app;
+    pub mod app;
     pub mod config;
+    pub mod mount;
+    pub mod utils;
 }
 
 mod ui {
     pub mod drive_ui;
+    pub mod error_ui;
     pub mod main_ui;
     pub mod settings_ui;
-    pub mod tui;
 }
-use ui::tui::tui::start_tui;
 
-fn main() {
-    let _ = start_tui();
+use std::io;
+
+use lib::app::app_mod::App;
+
+fn main() -> Result<(), io::Error> {
+    let mut app: App = App::new();
+
+    let res = app.start();
+
+    app.exit();
+
+    if let Err(err) = res {
+        println!("{:?}", err)
+    }
+
+    Ok(())
 }
