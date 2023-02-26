@@ -3,6 +3,8 @@
 pub mod app_mod {
     use std::{
         io::{self, Stdout},
+        process::Child,
+        thread::JoinHandle,
         time::Duration,
     };
 
@@ -82,6 +84,8 @@ pub mod app_mod {
         pub drives: StatefulList<DriveStruct>,
         pub bottom_message: &'a str,
         pub mounted_drive: Option<DriveStruct>,
+        pub rclone_process: Option<Child>,
+        pub rclone_thread: Option<JoinHandle<()>>,
     }
 
     impl App<'_> {
@@ -126,6 +130,8 @@ pub mod app_mod {
                 drives: StatefulList::with_items(&rclone_conf.drives),
                 bottom_message: "Use Arrow keys to navigate drives and press Enter",
                 mounted_drive: None,
+                rclone_process: None,
+                rclone_thread: None,
             };
             app.drives.state.select(Some(0));
             app
@@ -143,7 +149,7 @@ pub mod app_mod {
                 if poll(Duration::from_millis(500))? {
                     match event::read().unwrap() {
                         Event::Resize(width, height) => {
-                            if width < 80 || height < 20 {
+                            if width < 80 || height < 21 {
                                 self.error_temp_idx = self.ui_idx;
                                 self.ui_idx = 3;
                                 self.go_error(width, height);
@@ -179,19 +185,43 @@ pub mod app_mod {
                                                     self.bottom_message =
                                                         "No need to re-mount same drive ^_^";
                                                 } else {
-                                                    stop_mounting(&drive);
+                                                    stop_mounting(
+                                                        &drive,
+                                                        self.rclone_process.as_mut().unwrap(),
+                                                        // self.rclone_thread.as_mut().unwrap(),
+                                                    );
                                                     self.bottom_message= "Use Arrow keys to navigate drives and press Enter";
                                                     self.mounted_drive = Some(mounted.clone());
-                                                    start_mounting(&mounted);
+                                                    let ret = start_mounting(&mounted);
+                                                    self.rclone_thread = Some(ret.0);
+                                                    self.rclone_process = Some(ret.1);
                                                 }
                                             }
                                             None => {
                                                 self.bottom_message= "Use Arrow keys to navigate drives and press Enter";
                                                 self.mounted_drive = Some(mounted.clone());
-                                                start_mounting(&mounted);
+                                                let ret = start_mounting(&mounted);
+                                                self.rclone_thread = Some(ret.0);
+                                                self.rclone_process = Some(ret.1);
                                             }
                                         }
                                     }
+                                    KeyCode::Backspace => match &self.mounted_drive {
+                                        Some(drive) => {
+                                            self.bottom_message = "Unmounting ...";
+                                            stop_mounting(
+                                                &drive,
+                                                self.rclone_process.as_mut().unwrap(),
+                                                // self.rclone_thread.as_mut().unwrap(),
+                                            );
+                                            self.mounted_drive = None;
+                                            self.rclone_process = None;
+                                            self.rclone_thread = None;
+                                        }
+                                        None => {
+                                            self.bottom_message = "There is no drive to unmount!"
+                                        }
+                                    },
                                     _ => {}
                                 }
                             }

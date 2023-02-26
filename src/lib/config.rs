@@ -49,8 +49,7 @@ pub mod config {
     }
 
     pub fn read_rclone_config() -> ConfigStruct {
-        // let path = get_config_path(ConfigType::Rclone);
-        let path = r"C:\Users\evilDAVE\dev\rrclone\config.conf";
+        let path = get_config_path(ConfigType::Rclone);
 
         let file = File::open(&path).unwrap();
         let buffered = BufReader::new(file);
@@ -99,7 +98,10 @@ pub mod config {
                 }
             }
         }
-        ConfigStruct { path: path.to_owned(), drives }
+        ConfigStruct {
+            path: path.to_owned(),
+            drives,
+        }
     }
 
     // pub fn write() {}
