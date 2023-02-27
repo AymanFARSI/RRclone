@@ -11,7 +11,5 @@ log = "0.4.17"
 mountpoints = "0.2.1"
 rand = "0.8.5"
 serde_json = "1.0.93"
-simple-logging = "2.0.2"
-# tokio = { version = "1.25.0", features = ["full"] }
 tui = "0.19.0"
 tui-logger = "0.8.1"
