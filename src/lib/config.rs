@@ -39,19 +39,18 @@ pub mod config {
         let mut config_path;
         config_path = match env::consts::OS {
             "windows" => std::env::var("APPDATA").expect("Can not get AppData folder"),
-
             _ => std::env::var("HOME").expect("Can not get HOME directory"),
         };
         match conf_type {
             ConfigType::RRclone => config_path.push_str("/rrclone/config.conf"),
-            ConfigType::Rclone => config_path.push_str("/rclone/rclone.conf"),
+            ConfigType::Rclone => config_path.push_str("/.config/rclone/rclone.conf"),
         }
         config_path
     }
 
     pub fn read_rclone_config() -> ConfigStruct {
         let path = get_config_path(ConfigType::Rclone);
-
+        println!("{}", path);
         let file = File::open(&path).unwrap();
         let buffered = BufReader::new(file);
 
@@ -92,7 +91,10 @@ pub mod config {
                             access_token: json["access_token"].to_string().replace("\"", ""),
                             token_type: json["token_type"].to_string().replace("\"", ""),
                             refresh_token: json["refresh_token"].to_string().replace("\"", ""),
-                            expiry: DateTime::parse_from_rfc3339(&json["expiry"].to_string().replace("\"", "")).unwrap(),
+                            expiry: DateTime::parse_from_rfc3339(
+                                &json["expiry"].to_string().replace("\"", ""),
+                            )
+                            .unwrap(),
                         });
                     }
                     _ => continue,

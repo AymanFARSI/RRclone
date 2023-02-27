@@ -238,8 +238,7 @@ pub mod app_mod {
                                         KeyCode::Up => self.drives.previous(),
                                         KeyCode::Enter => {
                                             if self.insert_mode {
-                                                self.drive_message =
-                                                    "Exit insert mode first 'Esc'";
+                                                self.drive_message = "Exit insert mode first 'Esc'";
                                             } else {
                                                 self.drive_message =
                                                     "After login, press 'r' to refresh";
