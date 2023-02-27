@@ -13,7 +13,7 @@ pub mod config {
         pub drives: Vec<DriveStruct>,
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     pub struct DriveStruct {
         pub name: String,
         pub drive_type: String,
@@ -21,7 +21,7 @@ pub mod config {
         pub token: TokenStruct,
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     pub struct TokenStruct {
         pub access_token: String,
         pub token_type: String,

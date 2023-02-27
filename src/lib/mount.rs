@@ -80,7 +80,7 @@ pub mod mount {
             //     }
             // }
         });
-        app.process_mount.push(rx1.recv().unwrap());
+        app.processes_mounted.push(rx1.recv().unwrap());
     }
 
     pub fn stop_mounting(drive: &DriveStruct, process: &mut Child) {
@@ -90,5 +90,6 @@ pub mod mount {
             get_levelfilter_emoji(LevelFilter::Warn)
         ));
         process.kill().expect("command wasn't running");
+        log_debug(format!("Killed process ID: {}", process.id()));
     }
 }
