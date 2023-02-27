@@ -27,10 +27,10 @@ pub mod app_mod {
         lib::{
             config::config::{read_rclone_config, ConfigStruct, DriveStruct},
             mount::mount::{start_mounting, stop_mounting},
+            utils::utils::login_google_drive,
         },
         ui::{
             drive_ui::drive_ui::drive_ui, error_ui::error_ui::error_ui, main_ui::main_ui::main_ui,
-            settings_ui::settings_ui::settings_ui,
         },
     };
 
@@ -82,9 +82,12 @@ pub mod app_mod {
         pub terminal: Terminal<CrosstermBackend<Stdout>>,
         pub rclone_conf: ConfigStruct,
         pub drives: StatefulList<DriveStruct>,
-        pub bottom_message: &'a str,
+        pub main_message: &'a str,
+        pub drive_message: &'a str,
         pub drives_mounted: Vec<DriveStruct>,
         pub processes_mounted: Vec<Child>,
+        pub insert_mode: bool,
+        pub new_name: String,
     }
 
     impl App<'_> {
@@ -127,9 +130,12 @@ pub mod app_mod {
                 terminal,
                 rclone_conf: rclone_conf.clone(),
                 drives: StatefulList::with_items(&rclone_conf.drives),
-                bottom_message: "Use Arrow keys to navigate drives and press Enter",
+                main_message: "Use Arrow keys to navigate drives and press Enter",
+                drive_message: "Managing drives",
                 drives_mounted: vec![],
                 processes_mounted: vec![],
+                insert_mode: false,
+                new_name: String::new(),
             };
             app.drives.state.select(Some(0));
             app
@@ -140,8 +146,7 @@ pub mod app_mod {
                 match self.ui_idx {
                     0 => self.go_main(),
                     1 => self.go_drives(),
-                    2 => self.go_settings(),
-                    3 => {}
+                    2 => {}
                     _ => panic!("Screen not found"),
                 };
                 if poll(Duration::from_millis(500))? {
@@ -149,7 +154,7 @@ pub mod app_mod {
                         Event::Resize(width, height) => {
                             if width < 80 || height < 21 {
                                 self.error_temp_idx = self.ui_idx;
-                                self.ui_idx = 3;
+                                self.ui_idx = 2;
                                 self.go_error(width, height);
                             } else {
                                 let temp = self.error_temp_idx;
@@ -157,62 +162,134 @@ pub mod app_mod {
                                 self.error_temp_idx = 0;
                             }
                         }
-                        Event::Key(key) => {
-                            if key.kind == KeyEventKind::Press {
-                                match key.modifiers {
-                                    KeyModifiers::SHIFT => {
-                                        if key.code == KeyCode::Right {
-                                            println!("SHIFT + Right");
+                        Event::Key(key) => match &self.ui_idx {
+                            0 => {
+                                if key.kind == KeyEventKind::Press {
+                                    match key.modifiers {
+                                        KeyModifiers::SHIFT => {
+                                            if key.code == KeyCode::Right {
+                                                println!("SHIFT + Right");
+                                            }
                                         }
+                                        _ => {}
                                     }
-                                    _ => {}
-                                }
-                                match key.code {
-                                    KeyCode::Char('q') => {
-                                        for index in 0..self.processes_mounted.len() {
-                                            stop_mounting(
-                                                &self.drives_mounted[index],
-                                                &mut self.processes_mounted[index],
-                                            );
+                                    match key.code {
+                                        KeyCode::Char('q') => {
+                                            for index in 0..self.processes_mounted.len() {
+                                                stop_mounting(
+                                                    &self.drives_mounted[index],
+                                                    &mut self.processes_mounted[index],
+                                                );
+                                            }
+                                            return Ok(());
                                         }
-                                        return Ok(());
-                                    }
-                                    KeyCode::Char('m') => self.ui_idx = 0,
-                                    KeyCode::Char('d') => self.ui_idx = 1,
-                                    KeyCode::Char('s') => self.ui_idx = 2,
-                                    KeyCode::Down => self.drives.next(),
-                                    KeyCode::Up => self.drives.previous(),
-                                    KeyCode::Enter => {
-                                        let i = self.drives.state.selected().unwrap();
-                                        let mounted = self.drives.items[i].clone();
-                                        if self.drives_mounted.contains(&mounted) {
-                                            self.bottom_message =
-                                                "No need to re-mount same drive ^_^";
-                                        } else {
-                                            self.bottom_message = "Mounting ...";
-                                            self.drives_mounted.push(mounted.clone());
-                                            start_mounting(&mounted, self);
+                                        KeyCode::Char('d') => self.ui_idx = 1,
+                                        KeyCode::Char('r') => {
+                                            self.drive_message = "Refreshing list of drives";
+                                            let rclone_conf = read_rclone_config();
+                                            self.rclone_conf = rclone_conf.clone();
+                                            self.drives =
+                                                StatefulList::with_items(&rclone_conf.drives);
+                                            self.drives.state.select(Some(0));
                                         }
-                                    }
-                                    KeyCode::Delete => {
-                                        let i = self.drives.state.selected().unwrap();
-                                        let mounted = self.drives.items[i].clone();
-                                        if self.drives_mounted.contains(&mounted) {
-                                            self.bottom_message = "Unmounting ...";
-                                            let i = self.drives_mounted.iter()
-                                            .position(|x| x == &mounted)
-                                            .unwrap();
-                                            stop_mounting(&mounted, &mut self.processes_mounted[i]);
-                                            self.drives_mounted.remove(i);
-                                            self.processes_mounted.remove(i);
-                                        } else {
-                                            self.bottom_message = "There is no drive to unmount!"
+                                        KeyCode::Down => self.drives.next(),
+                                        KeyCode::Up => self.drives.previous(),
+                                        KeyCode::Enter => {
+                                            let i = self.drives.state.selected().unwrap();
+                                            let mounted = self.drives.items[i].clone();
+                                            if self.drives_mounted.contains(&mounted) {
+                                                self.main_message =
+                                                    "No need to re-mount same drive ^_^";
+                                            } else {
+                                                self.main_message = "Mounting ...";
+                                                self.drives_mounted.push(mounted.clone());
+                                                start_mounting(&mounted, self);
+                                            }
                                         }
+                                        KeyCode::Delete => {
+                                            let i = self.drives.state.selected().unwrap();
+                                            let mounted = self.drives.items[i].clone();
+                                            if self.drives_mounted.contains(&mounted) {
+                                                self.main_message = "Unmounting ...";
+                                                let i = self
+                                                    .drives_mounted
+                                                    .iter()
+                                                    .position(|x| x == &mounted)
+                                                    .unwrap();
+                                                stop_mounting(
+                                                    &mounted,
+                                                    &mut self.processes_mounted[i],
+                                                );
+                                                self.drives_mounted.remove(i);
+                                                self.processes_mounted.remove(i);
+                                            } else {
+                                                self.main_message = "There is no drive to unmount!"
+                                            }
+                                        }
+                                        _ => {}
                                     }
-                                    _ => {}
                                 }
                             }
-                        }
+                            1 => {
+                                if key.kind == KeyEventKind::Press {
+                                    match key.code {
+                                        KeyCode::Esc => self.insert_mode = false,
+                                        KeyCode::Down => self.drives.next(),
+                                        KeyCode::Up => self.drives.previous(),
+                                        KeyCode::Enter => {
+                                            if self.insert_mode {
+                                                self.drive_message =
+                                                    "Exit insert mode first 'Esc'";
+                                            } else {
+                                                self.drive_message =
+                                                    "After login, press 'r' to refresh";
+                                                self.insert_mode = false;
+                                                login_google_drive(self.new_name.clone());
+                                            }
+                                        }
+                                        KeyCode::Backspace => {
+                                            self.new_name.pop();
+                                        }
+                                        KeyCode::Char(c) => {
+                                            if self.insert_mode {
+                                                self.new_name.push(c);
+                                            } else {
+                                                match c {
+                                                    'i' => self.insert_mode = true,
+                                                    'm' => self.ui_idx = 0,
+                                                    'q' => {
+                                                        for index in 0..self.processes_mounted.len()
+                                                        {
+                                                            stop_mounting(
+                                                                &self.drives_mounted[index],
+                                                                &mut self.processes_mounted[index],
+                                                            );
+                                                        }
+                                                        return Ok(());
+                                                    }
+                                                    'r' => {
+                                                        self.drive_message =
+                                                            "Refreshing list of drives";
+                                                        let rclone_conf = read_rclone_config();
+                                                        self.rclone_conf = rclone_conf.clone();
+                                                        self.drives = StatefulList::with_items(
+                                                            &rclone_conf.drives,
+                                                        );
+                                                        self.drives.state.select(Some(0));
+                                                    }
+                                                    // 'e' => {
+                                                    //     self.drive_message = "Editing ...";
+                                                    // }
+                                                    _ => {}
+                                                }
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            _ => {}
+                        },
                         _ => {}
                     }
                 }
@@ -241,26 +318,28 @@ pub mod app_mod {
 
         pub fn go_main(&mut self) {
             self.terminal
-                .draw(|f| main_ui(f, &self.drives, &self.bottom_message))
+                .draw(|f| main_ui(f, &self.drives, &self.main_message))
                 .expect("Couldnt navigate to main screen");
         }
 
         pub fn go_drives(&mut self) {
             self.terminal
-                .draw(drive_ui)
+                .draw(|f| {
+                    drive_ui(
+                        f,
+                        &self.drives,
+                        &self.drive_message,
+                        self.new_name.clone(),
+                        self.insert_mode.clone(),
+                    )
+                })
                 .expect("Couldnt navigate to drive screen");
-        }
-
-        pub fn go_settings(&mut self) {
-            self.terminal
-                .draw(settings_ui)
-                .expect("Couldnt navigate to settings screen");
         }
 
         pub fn go_error(&mut self, width: u16, height: u16) {
             self.terminal
                 .draw(|f| error_ui(f, width, height))
-                .expect("Couldnt navigate to settings screen");
+                .expect("Couldnt navigate to error screen");
         }
     }
 }

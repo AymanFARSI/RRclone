@@ -18,7 +18,7 @@ pub mod error_ui {
                     .border_type(BorderType::Rounded),
             )
             .label(Span::styled(
-                format!("{}x{} - please resize 😉", width, height),
+                format!("{}x{} - please resize 😉 to at least 80x21", width, height),
                 Style::default().fg(Color::Red),
             ))
             .style(Style::default());

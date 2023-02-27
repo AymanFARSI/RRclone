@@ -1,7 +1,30 @@
 #![allow(dead_code)]
 
 pub mod utils {
+    use std::{
+        process::{Command, Stdio},
+        thread,
+    };
+
     use log::{debug, error, info, trace, warn, LevelFilter};
+
+    pub fn login_google_drive(name: String) {
+        thread::spawn(move || {
+            Command::new("rclone")
+                .args(&[
+                    String::from("config"),
+                    String::from("create"),
+                    format!("{}", name.trim()),
+                    String::from("drive"),
+                    String::from("config_is_local"),
+                    String::from("true"),
+                ])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .unwrap();
+        });
+    }
 
     pub fn log_error(msg: String) {
         error!(target:"error", " {}", msg);

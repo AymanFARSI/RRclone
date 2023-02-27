@@ -405,6 +405,7 @@ dependencies = [
 name = "rrclone"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "crossterm 0.26.0",
  "log",
  "mountpoints",

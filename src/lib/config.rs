@@ -5,6 +5,7 @@ pub mod config {
     use std::fs::File;
     use std::io::{BufRead, BufReader};
 
+    use chrono::{DateTime, FixedOffset};
     use serde_json::Value;
 
     #[derive(Debug, Clone)]
@@ -26,7 +27,7 @@ pub mod config {
         pub access_token: String,
         pub token_type: String,
         pub refresh_token: String,
-        pub expiry: String,
+        pub expiry: DateTime<FixedOffset>,
     }
 
     enum ConfigType {
@@ -91,7 +92,7 @@ pub mod config {
                             access_token: json["access_token"].to_string().replace("\"", ""),
                             token_type: json["token_type"].to_string().replace("\"", ""),
                             refresh_token: json["refresh_token"].to_string().replace("\"", ""),
-                            expiry: json["expiry"].to_string().replace("\"", ""),
+                            expiry: DateTime::parse_from_rfc3339(&json["expiry"].to_string().replace("\"", "")).unwrap(),
                         });
                     }
                     _ => continue,
