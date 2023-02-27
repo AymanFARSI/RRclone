@@ -4,8 +4,8 @@ pub mod app_mod {
     use std::{
         io::{self, Stdout},
         process::Child,
-        thread::JoinHandle,
         time::Duration,
+        vec,
     };
 
     use log::LevelFilter;
@@ -84,8 +84,7 @@ pub mod app_mod {
         pub drives: StatefulList<DriveStruct>,
         pub bottom_message: &'a str,
         pub mounted_drive: Option<DriveStruct>,
-        pub rclone_process: Option<Child>,
-        pub rclone_thread: Option<JoinHandle<()>>,
+        pub process_mount: Vec<Child>,
     }
 
     impl App<'_> {
@@ -130,8 +129,7 @@ pub mod app_mod {
                 drives: StatefulList::with_items(&rclone_conf.drives),
                 bottom_message: "Use Arrow keys to navigate drives and press Enter",
                 mounted_drive: None,
-                rclone_process: None,
-                rclone_thread: None,
+                process_mount: vec![],
             };
             app.drives.state.select(Some(0));
             app
@@ -170,7 +168,16 @@ pub mod app_mod {
                                     _ => {}
                                 }
                                 match key.code {
-                                    KeyCode::Char('q') => return Ok(()),
+                                    KeyCode::Char('q') => {
+                                        return match &mut self.mounted_drive {
+                                            Some(mounted) => {
+                                                let i = self.drives.state.selected().unwrap();
+                                                stop_mounting(mounted, &mut self.process_mount[i]);
+                                                Ok(())
+                                            }
+                                            None => Ok(()),
+                                        };
+                                    }
                                     KeyCode::Char('m') => self.ui_idx = 0,
                                     KeyCode::Char('d') => self.ui_idx = 1,
                                     KeyCode::Char('s') => self.ui_idx = 2,
@@ -187,36 +194,35 @@ pub mod app_mod {
                                                 } else {
                                                     stop_mounting(
                                                         &drive,
-                                                        self.rclone_process.as_mut().unwrap(),
+                                                        &mut self.process_mount[i],
                                                         // self.rclone_thread.as_mut().unwrap(),
                                                     );
                                                     self.bottom_message= "Use Arrow keys to navigate drives and press Enter";
                                                     self.mounted_drive = Some(mounted.clone());
-                                                    let ret = start_mounting(&mounted);
-                                                    self.rclone_thread = Some(ret.0);
-                                                    self.rclone_process = Some(ret.1);
+                                                    start_mounting(&mounted, self);
                                                 }
                                             }
                                             None => {
                                                 self.bottom_message= "Use Arrow keys to navigate drives and press Enter";
                                                 self.mounted_drive = Some(mounted.clone());
-                                                let ret = start_mounting(&mounted);
-                                                self.rclone_thread = Some(ret.0);
-                                                self.rclone_process = Some(ret.1);
+                                                start_mounting(&mounted, self);
                                             }
                                         }
+                                        // for thread in &self.thread_poll {
+                                        //     thread.join().unwrap();
+                                        // }
                                     }
-                                    KeyCode::Backspace => match &self.mounted_drive {
+                                    KeyCode::Delete => match &self.mounted_drive {
                                         Some(drive) => {
+                                            let i = self.drives.state.selected().unwrap();
                                             self.bottom_message = "Unmounting ...";
                                             stop_mounting(
                                                 &drive,
-                                                self.rclone_process.as_mut().unwrap(),
+                                                &mut self.process_mount[i],
                                                 // self.rclone_thread.as_mut().unwrap(),
                                             );
                                             self.mounted_drive = None;
-                                            self.rclone_process = None;
-                                            self.rclone_thread = None;
+                                            self.process_mount.remove(i);
                                         }
                                         None => {
                                             self.bottom_message = "There is no drive to unmount!"

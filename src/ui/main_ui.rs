@@ -127,8 +127,8 @@ pub mod main_ui {
             .style_debug(Style::default().fg(Color::Green))
             .style_warn(Style::default().fg(Color::Yellow))
             .style_trace(Style::default().fg(Color::Magenta))
-            .style_info(Style::default().fg(Color::Cyan))
-            .style(Style::default().fg(Color::White).bg(Color::Black));
+            .style_info(Style::default().fg(Color::Cyan));
+            // .style(Style::default().fg(Color::White).bg(Color::Black))
         //     .state(&mut app.states[sel]);
         f.render_widget(tui_w, hchunks[1]);
     }
