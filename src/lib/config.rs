@@ -35,22 +35,19 @@ pub mod config {
         Rclone,
     }
 
-    fn get_config_path(conf_type: ConfigType) -> String {
-        let mut config_path;
-        config_path = match env::consts::OS {
-            "windows" => std::env::var("APPDATA").expect("Can not get AppData folder"),
-            _ => std::env::var("HOME").expect("Can not get HOME directory"),
-        };
-        match conf_type {
-            ConfigType::RRclone => config_path.push_str("/rrclone/config.conf"),
-            ConfigType::Rclone => config_path.push_str("/.config/rclone/rclone.conf"),
-        }
-        config_path
-    }
-
     pub fn read_rclone_config() -> ConfigStruct {
-        let path = get_config_path(ConfigType::Rclone);
-        println!("{}", path);
+        let path = match env::consts::OS {
+            "windows" => {
+                let mut path = std::env::var("APPDATA").expect("Can not get AppData folder");
+                path.push_str("/rclone/rclone.conf");
+                path
+            }
+            _ => {
+                let mut path = std::env::var("HOME").expect("Can not get HOME directory");
+                path.push_str("/.config/rclone/rclone.conf");
+                path
+            }
+        };
         let file = File::open(&path).unwrap();
         let buffered = BufReader::new(file);
 

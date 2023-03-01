@@ -76,8 +76,8 @@ pub mod mount {
                     String::from("--vfs-cache-mode"),
                     String::from("full"),
                     String::from("--allow-other"),
-                    String::from("--vfs-read-chunk-size"),
-                    String::from("32M"),
+                    // String::from("--vfs-read-chunk-size"),
+                    // String::from("32M"),
                 ])
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
@@ -96,15 +96,6 @@ pub mod mount {
                 }
                 Err(e) => log_error(e.to_string()),
             }
-            // match rx.try_recv() {
-            //     Ok(_) | Err(TryRecvError::Disconnected) => {
-            //         println!("Terminating.");
-            //         return;
-            //     }
-            //     Err(TryRecvError::Empty) => {
-            //         log_info("msg".to_owned());
-            //     }
-            // }
         });
         app.processes_mounted.push(rx1.recv().unwrap());
     }
