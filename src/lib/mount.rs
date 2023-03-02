@@ -47,7 +47,7 @@ pub mod mount {
                 difference.first().unwrap().to_string()
             }
             _ => {
-                let mut path = String::from("/Users/evildave");
+                let mut path = std::env::var("HOME").expect("Can not get HOME directory");
                 let name = format!("/{}", drive.name.clone());
                 path.push_str(&name);
                 log_debug(path.clone());
@@ -84,11 +84,22 @@ pub mod mount {
                 .spawn();
             match child {
                 Ok(child) => {
-                    // for line in BufReader::new(child.stdout.as_mut().unwrap()).lines() {
+                    // let child_stdout = child.stdout.take().unwrap();
+                    // let mut stdout_lines = BufReader::new(child_stdout);
+                    // for line in stdout_lines {
                     //     let line = (&line.unwrap()[20..]).to_string();
+                    //     println!("{}", line);
                     //     log_info(format!("{}", line));
                     // }
-                    // for line in BufReader::new(child.stderr.as_mut().unwrap()).lines() {
+                    // let mut line = String::with_capacity(10);
+                    // println!("Line : {}", line.clone());
+                    // while stdout_lines.read_line(&mut line).unwrap_or(0) > 0 {
+                    //     log_info(format!("{}", line));
+                    //     line.clear();
+                    // }
+                    // let child_stderr = child.stdout.take().unwrap();
+                    // let stderr_lines = BufReader::new(child_stderr).lines();
+                    // for line in stderr_lines {
                     //     let line = (&line.unwrap()[20..]).to_string();
                     //     log_error(format!("{}", line));
                     // }
@@ -97,6 +108,7 @@ pub mod mount {
                 Err(e) => log_error(e.to_string()),
             }
         });
+        // handle.join().unwrap();
         app.processes_mounted.push(rx1.recv().unwrap());
     }
 
